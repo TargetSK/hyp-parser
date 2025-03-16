@@ -19,7 +19,6 @@ class Parser():
 
         self.driver:webdriver = webdriver.Chrome()
         
-        self.flyer_grid: WebElement       
         self.flyer_grid: WebElement
         self.agree_button: WebElement
         self.list_of_shops: WebElement
@@ -42,7 +41,7 @@ class Parser():
 
     #changes shop names for usage (lowercase, no ä, ö and such, ...)
     def parse_shop_names(self,shop_name:str) -> str:
-        shop_name = unidecode(shop_name)
+        shop_name = self.normalize_string(shop_name)
         shop_name = shop_name.lower()
         shop_name = re.sub(r'\s+', '-', shop_name)
         shop_name = re.sub(r'[^a-z-]', '', shop_name)
@@ -98,7 +97,7 @@ class Parser():
         })
 
     # remove accents from words
-    def normalize_title(self,title:str) -> str:
+    def normalize_string(self,title:str) -> str:
         return unidecode(title)
 
     #validate if flyer is current, if yes call add_to_output
@@ -119,11 +118,12 @@ class Parser():
     #get the main info from the flyer webelement 
     def parse_flyers(self,shop_name_parsed:str) -> None:
         for flyer in self.flyer_elements:
-            self.title: str = self.normalize_title(flyer.find_element(By.TAG_NAME,"strong").text)
+            self.title: str = self.normalize_string(flyer.find_element(By.TAG_NAME,"strong").text)
 
             self.thumbnail: str = flyer.find_element(By.XPATH, ".//img").get_attribute("src")
 
-            self.shop_name: str = unidecode(self.shop_names_unparsed[self.shop_names_parsed.index(shop_name_parsed)]) #if parsed is for example aldi then it picks the unparsed version (Aldi)
+            #if parsed is for example aldi then it picks the unparsed version (Aldi) and removes accents on letters
+            self.shop_name: str = self.normalize_string(self.shop_names_unparsed[self.shop_names_parsed.index(shop_name_parsed)]) 
 
             self.valid_from: str = self.parse_date_range(flyer)[0]
 
