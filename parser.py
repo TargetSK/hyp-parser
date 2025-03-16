@@ -11,14 +11,14 @@ class Parser():
     def __init__(self, url: str) -> None:
         self.url:str = url
         self.old_url:str = "hypermarkte"
-        self.shops: list = []
-        self.shop_names_parsed: list = []
-        self.shop_names_unparsed: list= []
-        self.flyer_elements: list
-        self.output: list = []
+        self.shop_names_parsed: list[str] = []
+        self.shop_names_unparsed: list[str] = []
+        self.output: list[dict] = []
 
         self.driver:webdriver = webdriver.Chrome()
         
+        self.shops: list[WebElement] 
+        self.flyer_elements: list[WebElement]
         self.flyer_grid: WebElement
         self.agree_button: WebElement
         self.list_of_shops: WebElement
@@ -35,7 +35,7 @@ class Parser():
         self.driver.get(self.url)
 
     #returns list of <a> tags with all the shops
-    def get_shops(self):
+    def get_shops(self) -> list[WebElement]:
         self.list_of_shops = self.driver.find_element(By.ID,'left-category-shops')
         return self.list_of_shops.find_elements(By.TAG_NAME, "a")
 
@@ -142,7 +142,7 @@ class Parser():
     def parse(self) -> str:
         self.driver.get(self.url)
         self.agree_popup()
-        self.shops: list = self.get_shops()
+        self.shops = self.get_shops()
 
         for shop in self.shops:
             self.shop_names_unparsed.append(shop.text)
