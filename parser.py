@@ -1,13 +1,10 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.remote.webelement import WebElement
 import datetime
 import time
 import json 
 import re
-import unicodedata
 from unidecode import unidecode
 
 class Parser():
@@ -17,9 +14,15 @@ class Parser():
         self.shops: list = []
         self.shop_names_parsed: list = []
         self.shop_names_unparsed: list= []
+        self.flyer_elements: list
         self.output: list = []
 
         self.driver:webdriver = webdriver.Chrome()
+        
+        self.flyer_grid: WebElement       
+        self.flyer_grid: WebElement
+        self.agree_button: WebElement
+        self.list_of_shops: WebElement
 
     #click agree on popup
     def agree_popup(self) -> None:        
@@ -34,8 +37,8 @@ class Parser():
 
     #returns list of <a> tags with all the shops
     def get_shops(self):
-        self.listOfShops = self.driver.find_element(By.ID,'left-category-shops')
-        return self.listOfShops.find_elements(By.TAG_NAME, "a")
+        self.list_of_shops = self.driver.find_element(By.ID,'left-category-shops')
+        return self.list_of_shops.find_elements(By.TAG_NAME, "a")
 
     #changes shop names for usage (lowercase, no ä, ö and such, ...)
     def parse_shop_names(self,shop_name:str) -> str:
@@ -55,18 +58,20 @@ class Parser():
     #set flyer_elements to list of flyer webelements
     def get_flyers(self) -> None:
         self.flyer_grid = self.driver.find_element(By.XPATH, "//div[contains(@class, 'letaky-grid')]")
-        self.flyer_elements: list = self.flyer_grid.find_elements(By.XPATH, ".//div[contains(@class, 'grid-item box blue  ')]")
+        self.flyer_elements = self.flyer_grid.find_elements(By.XPATH, ".//div[contains(@class, 'grid-item box blue  ')]")
+
 
     #return parsed dates (dd.mm.yyyy -> YYYY-mm-dd)
-    def get_date(self,flyer) -> list:
-        text: str = flyer.find_element(By.XPATH,".//small[contains(@class, 'visible-sm')]").text
+    def parse_date_range(self,flyer) -> tuple[str, str]:
+        text = flyer.find_element(By.XPATH,".//small[contains(@class, 'visible-sm')]").text
         text = text.replace(".", "-")
 
+        #fiew are like "from Monday 13. 3." for example
         if "von" in text:
+            end_date = "0"
             text = text.split(" ")
             start_date = text[-1].split("-")
             start_date = "-".join(start_date[::-1])
-            end_date = "0"
 
         else:
             start_date = text[0:5]
@@ -102,7 +107,7 @@ class Parser():
         today_datetime:datetime.datetime = datetime.datetime.strptime(today_datetime,'%Y-%m-%d')
         valid_from_daytime:datetime.datetime = datetime.datetime.strptime(self.valid_from, "%Y-%m-%d")
 
-        if self.valid_to == "0":...
+        if self.valid_to == "0": pass
         else: valid_to_daytime = datetime.datetime.strptime(self.valid_to, "%Y-%m-%d") 
 
         if valid_from_daytime <= today_datetime:
@@ -118,11 +123,11 @@ class Parser():
 
             self.thumbnail: str = flyer.find_element(By.XPATH, ".//img").get_attribute("src")
 
-            self.shop_name: str = unidecode(self.shop_names_unparsed[self.shop_names_parsed.index(shop_name_parsed)])
+            self.shop_name: str = unidecode(self.shop_names_unparsed[self.shop_names_parsed.index(shop_name_parsed)]) #if parsed is for example aldi then it picks the unparsed version (Aldi)
 
-            self.valid_from: str = self.get_date(flyer)[0]
+            self.valid_from: str = self.parse_date_range(flyer)[0]
 
-            self.valid_to: str = self.get_date(flyer)[1]
+            self.valid_to: str = self.parse_date_range(flyer)[1]
 
             self.parsed_time: str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -134,7 +139,7 @@ class Parser():
             json.dump(self.output,file,indent=4)
 
     #main method of the parser
-    def Parse(self) -> str:
+    def parse(self) -> str:
         self.driver.get(self.url)
         self.agree_popup()
         self.shops: list = self.get_shops()
@@ -154,7 +159,7 @@ class Parser():
 
 def main() -> None:
     parser = Parser("https://www.prospektmaschine.de/hypermarkte/")
-    parser.Parse()
+    parser.parse()
 
 if __name__ == "__main__":
     main()
